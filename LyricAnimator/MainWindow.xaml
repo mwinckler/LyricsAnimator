@@ -1,0 +1,30 @@
+﻿<Window
+    x:Class="LyricAnimator.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:LyricAnimator"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="MainWindow"
+    Width="1920"
+    Height="1080"
+    Background="Black"
+    mc:Ignorable="d">
+    <Viewbox
+        x:Name="viewbox"
+        Width="1920"
+        Height="1080">
+        <Canvas
+            x:Name="canvas"
+            Width="1920"
+            Height="1080"
+            Background="Black">
+            <Label
+                x:Name="myTextBox"
+                Canvas.Left="400"
+                Content="My text goes here"
+                FontSize="72"
+                Foreground="White" />
+        </Canvas>
+    </Viewbox>
+</Window>
