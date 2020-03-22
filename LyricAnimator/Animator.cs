@@ -29,7 +29,7 @@ namespace LyricAnimator
 
         private readonly Color titleColor = Color.FromRgb(93, 93, 93);
 
-        public void Animate(Configuration config, string ffmpegExePath, string pngOutputPath = null)
+        public void Animate(Configuration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
         {
             var canvas = new Canvas
             {
@@ -132,9 +132,12 @@ namespace LyricAnimator
             Canvas.SetTop(titleBar, (TitleBarHeight - titleBar.ActualHeight) / 2);
 
             // Calculate total frames required to animate all lyrics
-            var totalFramesRequired = lyrics.Max(lyric => lyric.lyric.EndTime.TotalSeconds) * FramesPerSecond;
+            var lastEndTime = lyrics.Max(lyric => lyric.lyric.EndTime.TotalSeconds);
+            var lastLyric = lyrics.First(lyric => lyric.lyric.EndTime.TotalSeconds == lastEndTime);
+            var postRollFrames = EndOfVerseY / lastLyric.pixelsPerFrame;
+            var totalFramesRequired = lastEndTime * FramesPerSecond + postRollFrames;
 
-            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFile, config.OutputFile);
+            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFilePath, System.IO.Path.Combine(outputDirectory.FullName, config.OutputFilename));
 
             for (var frame = 0; frame <= totalFramesRequired; frame++)
             {
@@ -184,9 +187,11 @@ namespace LyricAnimator
                 encoder.Save(ms);
                 ms.Position = 0;
                 ms.WriteTo(ffmpegProcess.StandardInput.BaseStream);
+                ms.Flush();
+                ms.Close();
+                ffmpegProcess.StandardInput.BaseStream.Flush();
             }
 
-            ffmpegProcess.StandardInput.BaseStream.Flush();
             ffmpegProcess.StandardInput.BaseStream.Close();
             ffmpegProcess.WaitForExit();
         }

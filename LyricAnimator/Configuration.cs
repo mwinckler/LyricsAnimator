@@ -10,8 +10,8 @@ namespace LyricAnimator
         public string SongTitle { get; set; }
         public string TitleFont { get; set; }
         public string LyricsFont { get; set; }
-        public string AudioFile { get; set; }
-        public string OutputFile { get; set; }
+        public string AudioFilePath { get; set; }
+        public string OutputFilename { get; set; }
         public List<Lyric> Lyrics { get; set; }
 
         public static Configuration LoadFromFile(string filePath)
