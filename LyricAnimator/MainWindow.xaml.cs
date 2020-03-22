@@ -12,7 +12,7 @@ namespace LyricAnimator
 
             config = Configuration.LoadFromFile(@"c:\tmp\animations\config\config.json");
 
-            new Animator().Animate(config);
+            new Animator().Animate(config, @"c:\Users\mattw\bin\ffmpeg.exe");
 
             Application.Current.Shutdown();
         }

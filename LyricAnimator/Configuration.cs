@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
@@ -19,8 +20,8 @@ namespace LyricAnimator
 
     internal class Lyric
     {
-        public double StartSeconds { get; set; }
-        public double EndSeconds { get; set; }
+        public TimeSpan StartTime { get; set; }
+        public TimeSpan EndTime { get; set; }
         public string Text { get; set; }
         public int Verse { get; set; }
     }

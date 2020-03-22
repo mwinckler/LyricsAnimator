@@ -10,21 +10,6 @@
     Height="1080"
     Background="Black"
     mc:Ignorable="d">
-    <Viewbox
-        x:Name="viewbox"
-        Width="1920"
-        Height="1080">
-        <Canvas
-            x:Name="canvas"
-            Width="1920"
-            Height="1080"
-            Background="Black">
-            <Label
-                x:Name="myTextBox"
-                Canvas.Left="400"
-                Content="My text goes here"
-                FontSize="72"
-                Foreground="White" />
-        </Canvas>
-    </Viewbox>
+
+    <Grid />
 </Window>

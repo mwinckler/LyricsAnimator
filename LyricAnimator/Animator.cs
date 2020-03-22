@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -18,14 +19,17 @@ namespace LyricAnimator
         private const int FramesPerSecond = 60;
         private const int TitleBarHeight = 100;
         private const int GradientBarHeight = 150;
+        private const int MinimumVisibleLyricHeight = 100;
+        private const int VerseLabelMargin = 100;
+        private const int DissolveAnimationDurationFrames = 60;
 
         // This is the y-position, in pixels, where the bottom of
         // the lyrics label should end up at the end of verse time.
         private const double EndOfVerseY = 200;
 
-        private SolidColorBrush titleBrush = new SolidColorBrush(Color.FromRgb(93, 93, 93));
+        private Color titleColor = Color.FromRgb(93, 93, 93);
 
-        public void Animate(Configuration config)
+        public void Animate(Configuration config, string ffmpegExePath, string pngOutputPath = null)
         {
             var canvas = new Canvas
             {
@@ -35,9 +39,9 @@ namespace LyricAnimator
                 ClipToBounds = true
             };
 
-            var lyrics = new List<(Lyric lyric, TextBlock textBlock, int startFrame, double startTop, double pixelsPerFrame)>();
+            var lyrics = new List<(Lyric lyric, TextBlock lyricsText, TextBlock verseText, int startFrame, int endFrame, double startTop, double pixelsPerFrame)>();
 
-            var y0 = Height - GradientBarHeight;
+            var y0 = Height - GradientBarHeight - MinimumVisibleLyricHeight;
             var y1 = EndOfVerseY;
 
             foreach (var lyric in config.Lyrics)
@@ -53,7 +57,7 @@ namespace LyricAnimator
                 };
 
                 canvas.Children.Add(textBlock);
-                Canvas.SetTop(textBlock, canvas.ActualHeight);
+                Canvas.SetTop(textBlock, Height);
                 Canvas.SetLeft(textBlock, LyricsSideMargin);
 
                 textBlock.Measure(new Size(Width - LyricsSideMargin * 2, double.PositiveInfinity));
@@ -63,23 +67,35 @@ namespace LyricAnimator
                 Render(canvas);
 
                 var distanceToMovePixels = y0 + (textBlock.ActualHeight - y1);
-                var pixelsPerSecond = distanceToMovePixels / (lyric.EndSeconds - lyric.StartSeconds);
+                var pixelsPerSecond = distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds);
                 var pixelsPerFrame = pixelsPerSecond / FramesPerSecond;
                 // This is the number of frames "ahead of time" we need to start
                 // rolling the lyric label so that at StartSeconds, the top of the
                 // label is fully visible
                 var preRollFrames = GradientBarHeight / pixelsPerFrame;
-                var startFrame = (int) (lyric.StartSeconds * FramesPerSecond - preRollFrames);
-                var startTop = canvas.ActualHeight;
+                var startFrame = (int) (lyric.StartTime.TotalSeconds * FramesPerSecond - preRollFrames);
+                var startTop = Height;
 
                 if (startFrame < 0)
                 {
                     // Start the textbox higher up than completely off screen
-                    startTop = canvas.ActualHeight - pixelsPerFrame * Math.Abs(startFrame);
+                    startTop = (int) (Height - pixelsPerFrame * Math.Abs(startFrame));
                     startFrame = 0;
                 }
 
-                lyrics.Add((lyric, textBlock, startFrame, startTop, pixelsPerFrame));
+                var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * FramesPerSecond);
+
+                var verseText = lyric.Verse > 0
+                    ? new TextBlock
+                        {
+                            FontSize = 34,
+                            FontFamily = new FontFamily(config.LyricsFont),
+                            Text = $"verse {lyric.Verse}",
+                            Foreground = new SolidColorBrush(titleColor)
+                        }
+                    : null;
+
+                lyrics.Add((lyric, textBlock, verseText, startFrame, endFrame, startTop, pixelsPerFrame));
             }
 
             var topGradient = CreateGradient(false);
@@ -87,14 +103,14 @@ namespace LyricAnimator
             var titleBackground = new Rectangle
             {
                 Width = Width,
-                Height = Height,
+                Height = TitleBarHeight,
                 Fill = new SolidColorBrush(Colors.Black)
             };
 
             var titleBar = new TextBlock
             {
                 Background = new SolidColorBrush(Colors.Black),
-                Foreground = titleBrush,
+                Foreground = new SolidColorBrush(titleColor),
                 Width = Width,
                 FontFamily = new FontFamily(config.TitleFont),
                 FontSize = 48,
@@ -116,7 +132,9 @@ namespace LyricAnimator
             Canvas.SetTop(titleBar, (TitleBarHeight - titleBar.ActualHeight) / 2);
 
             // Calculate total frames required to animate all lyrics
-            var totalFramesRequired = lyrics.Max(lyric => lyric.lyric.EndSeconds) * FramesPerSecond;
+            var totalFramesRequired = lyrics.Max(lyric => lyric.lyric.EndTime.TotalSeconds) * FramesPerSecond;
+
+            var ffmpegProcess = StartFfmpeg(ffmpegExePath, @"c:\tmp\animations\output.mp4");
 
             for (var frame = 0; frame <= totalFramesRequired; frame++)
             {
@@ -127,15 +145,50 @@ namespace LyricAnimator
                         continue;
                     }
 
+                    if (lyric.verseText != null)
+                    {
+                        if (frame == lyric.startFrame)
+                        {
+                            canvas.Children.Add(lyric.verseText);
+                            Canvas.SetTop(lyric.verseText, Height - GradientBarHeight);
+                            Canvas.SetRight(lyric.verseText, VerseLabelMargin);
+
+                            lyric.verseText.Foreground.Opacity = 0;
+                        }
+                        else if (frame < lyric.startFrame + DissolveAnimationDurationFrames)
+                        {
+                            lyric.verseText.Foreground.Opacity = (frame - lyric.startFrame) / (double) DissolveAnimationDurationFrames;
+                        }
+                        else if (frame > lyric.endFrame - DissolveAnimationDurationFrames && frame <= lyric.endFrame)
+                        {
+                            lyric.verseText.Foreground.Opacity = (lyric.endFrame - frame) / (double)DissolveAnimationDurationFrames;
+                        }
+                    }
+
                     Canvas.SetTop(
-                        lyric.textBlock,
+                        lyric.lyricsText,
                         lyric.startTop - lyric.pixelsPerFrame * (frame - lyric.startFrame)
                     );
                 }
 
                 canvas.UpdateLayout();
-                SaveAsPng(GetImage(canvas), @$"c:\tmp\animations\output\{frame:D4}.png");
+
+                if (pngOutputPath != null)
+                {
+                    SaveAsPng(GetImage(canvas), System.IO.Path.Combine(pngOutputPath, $"{frame:D5}.png"));
+                }
+
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(GetImage(canvas)));
+                using var ms = new MemoryStream();
+                encoder.Save(ms);
+                ms.Position = 0;
+                ms.WriteTo(ffmpegProcess.StandardInput.BaseStream);
             }
+
+            ffmpegProcess.StandardInput.BaseStream.Flush();
+            ffmpegProcess.StandardInput.BaseStream.Close();
+            ffmpegProcess.WaitForExit();
         }
 
         private static void Render(UIElement element)
@@ -181,6 +234,25 @@ namespace LyricAnimator
 
             using var outputStream = new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.None);
             encoder.Save(outputStream);
+        }
+
+        private static Process StartFfmpeg(string ffmpegExePath, string outputFilePath)
+        {
+            var proc = new Process
+            {
+                StartInfo =
+                {
+                    FileName = ffmpegExePath,
+                    Arguments = $"-framerate {FramesPerSecond} -f image2pipe -i - {outputFilePath}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true
+                }
+            };
+
+            proc.Start();
+            return proc;
         }
     }
 }
