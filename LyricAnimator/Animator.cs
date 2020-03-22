@@ -25,9 +25,9 @@ namespace LyricAnimator
 
         // This is the y-position, in pixels, where the bottom of
         // the lyrics label should end up at the end of verse time.
-        private const double EndOfVerseY = 200;
+        private const double EndOfVerseY = Height / 2;
 
-        private Color titleColor = Color.FromRgb(93, 93, 93);
+        private readonly Color titleColor = Color.FromRgb(93, 93, 93);
 
         public void Animate(Configuration config, string ffmpegExePath, string pngOutputPath = null)
         {
@@ -61,7 +61,7 @@ namespace LyricAnimator
                 Canvas.SetLeft(textBlock, LyricsSideMargin);
 
                 textBlock.Measure(new Size(Width - LyricsSideMargin * 2, double.PositiveInfinity));
-                textBlock.Arrange(new Rect(0, 0, 200, 200)); // TODO: Does width/height matter here?
+                textBlock.Arrange(new Rect(0, 0, Width, Height));
                 textBlock.UpdateLayout();
 
                 Render(canvas);
@@ -134,7 +134,7 @@ namespace LyricAnimator
             // Calculate total frames required to animate all lyrics
             var totalFramesRequired = lyrics.Max(lyric => lyric.lyric.EndTime.TotalSeconds) * FramesPerSecond;
 
-            var ffmpegProcess = StartFfmpeg(ffmpegExePath, @"c:\tmp\animations\output.mp4");
+            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFile, config.OutputFile);
 
             for (var frame = 0; frame <= totalFramesRequired; frame++)
             {
@@ -236,14 +236,14 @@ namespace LyricAnimator
             encoder.Save(outputStream);
         }
 
-        private static Process StartFfmpeg(string ffmpegExePath, string outputFilePath)
+        private static Process StartFfmpeg(string ffmpegExePath, string audioFilePath, string outputFilePath)
         {
             var proc = new Process
             {
                 StartInfo =
                 {
                     FileName = ffmpegExePath,
-                    Arguments = $"-framerate {FramesPerSecond} -f image2pipe -i - {outputFilePath}",
+                    Arguments = $"-framerate {FramesPerSecond} -f image2pipe -i - -i {audioFilePath} {outputFilePath}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
