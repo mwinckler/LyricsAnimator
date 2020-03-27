@@ -8,8 +8,9 @@ namespace LyricAnimator
     internal class Configuration
     {
         public string SongTitle { get; set; }
-        public string TitleFont { get; set; }
-        public string LyricsFont { get; set; }
+        public FontConfig TitleFont { get; set; } = new FontConfig(50, "#5d5d5d");
+        public FontConfig LyricsFont { get; set; } = new FontConfig();
+        public FontConfig VerseFont { get; set; } = new FontConfig(32, "#5d5d5d");
         public string AudioFilePath { get; set; }
         public string OutputFilename { get; set; }
         public List<Lyric> Lyrics { get; set; }
@@ -24,7 +25,25 @@ namespace LyricAnimator
     {
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
-        public string Text { get; set; }
-        public int Verse { get; set; }
+        public List<string> Lines { get; set; }
+        public int VerseNumber { get; set; }
+    }
+
+    internal class FontConfig
+    {
+        public string Family { get; set; } = "Open Sans";
+        public float Size { get; set; } = 72f;
+        public string HexColor { get; set; } = "#ffffff";
+        public float LineMargin { get; set; } = 20f;
+
+        public FontConfig(float size, string hexColor)
+        {
+            Size = size;
+            HexColor = hexColor;
+        }
+
+        public FontConfig()
+        {
+        }
     }
 }

@@ -4,37 +4,72 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="MainWindow"
-    Width="400"
-    Height="300"
+    Title="Lyrics Animator"
+    Width="440"
+    Height="400"
+    Background="White"
     mc:Ignorable="d">
+    <Window.Resources>
+        <Style TargetType="{x:Type Border}">
+            <Setter Property="BorderThickness" Value="10" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+    </Window.Resources>
 
-    <StackPanel>
-        <StackPanel.Resources>
-            <Style TargetType="{x:Type Label}">
-                <Setter Property="Width" Value="150" />
-            </Style>
+    <Border>
+        <StackPanel>
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type Label}">
+                    <Setter Property="Width" Value="150" />
+                </Style>
 
-            <Style TargetType="{x:Type TextBox}">
-                <Setter Property="Width" Value="250" />
-            </Style>
-        </StackPanel.Resources>
+                <Style TargetType="{x:Type TextBox}">
+                    <Setter Property="Width" Value="250" />
+                </Style>
 
-        <StackPanel Orientation="Horizontal">
-            <Label>Path to ffmpeg:</Label>
-            <TextBox Text="{Binding PathToFfmpeg}" />
+                <Style TargetType="{x:Type StackPanel}">
+                    <Setter Property="Margin" Value="0,5" />
+                </Style>
+            </StackPanel.Resources>
+
+            <StackPanel Orientation="Horizontal">
+                <Label>Path to ffmpeg:</Label>
+                <TextBox Text="{Binding PathToFfmpeg}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label>Config directory:</Label>
+                <TextBox Text="{Binding ConfigDirectory}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label>Output directory:</Label>
+                <TextBox Text="{Binding OutputDirectory}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <CheckBox Content="Run in parallel (experimental)" IsChecked="{Binding RunInParallel}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <CheckBox Content="Save frame .png files" IsChecked="{Binding SaveFrames}" />
+            </StackPanel>
+
+            <Button
+                Width="120"
+                Height="30"
+                Command="{Binding Command}">
+                Create lyric videos
+            </Button>
+
+            <ProgressBar
+                Height="20"
+                Margin="10"
+                Maximum="100"
+                Minimum="0"
+                Value="{Binding Progress, Mode=OneWay}" />
+
+            <Label Width="400" Content="{Binding ProgressDetails, Mode=OneWay}" />
         </StackPanel>
-
-        <StackPanel Orientation="Horizontal">
-            <Label>Config directory:</Label>
-            <TextBox Text="{Binding ConfigDirectory}" />
-        </StackPanel>
-
-        <StackPanel Orientation="Horizontal">
-            <Label>Output directory:</Label>
-            <TextBox Text="{Binding OutputDirectory}" />
-        </StackPanel>
-
-        <Button Command="{Binding Command}">Create lyric videos</Button>
-    </StackPanel>
+    </Border>
 </Window>
