@@ -15,7 +15,6 @@ namespace LyricAnimator
         private const int FramesPerSecond = 60;
         private const int TitleBarHeight = 100;
         private const int GradientBarHeight = 150;
-        private const int MinimumVisibleLyricHeight = 200;
         private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
         private const int EndTransitionDissolveDurationFrames = 120;
@@ -41,6 +40,8 @@ namespace LyricAnimator
             using var lyricTypeface = SKTypeface.FromFamilyName(config.LyricsFont.Family);
             using var verseTypeface = SKTypeface.FromFamilyName(config.VerseFont.Family);
 
+            float? pixelsPerFrame = null;
+
             foreach (var lyric in config.Lyrics)
             {
                 var textHeight = CalculateTextHeight(
@@ -52,8 +53,22 @@ namespace LyricAnimator
                 );
 
                 var distanceToMovePixels = textHeight + (desiredReadingY - EndOfVerseY);
-                var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
-                var pixelsPerFrame = pixelsPerSecond / FramesPerSecond;
+
+                // All lyrics need to move at the same speed, else it looks goofy.
+                // Calculate speed based on the first verse, then apply that speed
+                // to all subsequent verses, adjusting their start frame as necessary
+                // to reach the correct point at the correct time.
+                //
+                // This effectively means we ignore EndTime on all but the first lyric.
+                //
+                // TODO: An alternative approach might be to take the average speed
+                //       of all lyrics. Need to test to see if that actually works better.
+                if (!pixelsPerFrame.HasValue)
+                {
+                    var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
+                    pixelsPerFrame = pixelsPerSecond / FramesPerSecond;
+                }
+
                 // This is the number of frames "ahead of time" we need to start
                 // rolling the lyric label so that at StartSeconds, the top of the
                 // label is fully visible
@@ -70,7 +85,7 @@ namespace LyricAnimator
 
                 var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * FramesPerSecond) + preRollFrames;
 
-                lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame));
+                lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame.Value));
             }
 
             // Calculate total frames required to animate all lyrics
@@ -141,17 +156,22 @@ namespace LyricAnimator
                     using var image = surface.Snapshot();
                     using var data = image.Encode(SKEncodedImageFormat.Png, 100);
                     using var ms = new MemoryStream(data.ToArray()) { Position = 0 };
-                    using var fs = new FileStream(Path.Combine(pngOutputPath, $"{frame:D5}.png"), FileMode.Create, FileAccess.Write);
 
                     ms.WriteTo(ffmpegProcess.StandardInput.BaseStream);
                     ms.Flush();
                     ffmpegProcess.StandardInput.BaseStream.Flush();
 
-                    ms.Position = 0;
-                    ms.WriteTo(fs);
-                    ms.Flush();
+                    if (pngOutputPath != null)
+                    {
+                        using var fs = new FileStream(Path.Combine(pngOutputPath, $"{frame:D5}.png"), FileMode.Create, FileAccess.Write);
 
-                    fs.Close();
+                        ms.Position = 0;
+                        ms.WriteTo(fs);
+                        ms.Flush();
+
+                        fs.Close();
+                    }
+
                     ms.Close();
                 }
             }
