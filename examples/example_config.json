@@ -1,0 +1,34 @@
+{
+  "songTitle": "#131B Not Haughty Is My Heart",
+  "audioFilePath": "C:\\tmp\\animations\\audio\\131B_Not_Haughty_Is_My_Heart.mp3",
+  "outputFilename": "131B_Not_Haughty_Is_My_Heart.mp4",
+  "lyrics": [
+    {
+      "startTime": "00:00:24",
+      "endTime": "00:00:48",
+      "lines": [
+        "Not haughty is my heart, not lofty is my pride;",
+        "I do not seek to know the things God's wisdom has denied."
+      ],
+      "verseNumber": 1
+    },
+    {
+      "startTime": "00:00:48",
+      "endTime": "00:01:13",
+      "lines": [
+        "With childlike trust, O Lord, in you I calmly rest,",
+        "contented as a little child upon its mother's breast."
+      ],
+      "verseNumber": 2
+    },
+    {
+      "startTime": "00:01:13",
+      "endTime": "00:01:39",
+      "lines": [
+        "O people of the Lord, in him alone confide;",
+        "from this time forth and evermore his wisdom be your guide."
+      ],
+      "verseNumber": 3
+    }
+  ]
+}
