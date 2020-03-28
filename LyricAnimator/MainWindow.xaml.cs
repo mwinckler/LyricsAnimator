@@ -98,7 +98,7 @@ namespace LyricAnimator
             var pngOutputDir = SaveFrames
                 ? Directory.CreateDirectory(Path.Combine(outputDir.FullName, Path.Combine($"png_{config.OutputFilename}")))
                 : null;
-            new AnimatorSkiaSharp().Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
+            new Animator().Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
         }
 
         private Action<float> ProgressReporterFactory(string identifier) =>

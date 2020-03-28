@@ -7,7 +7,7 @@ using SkiaSharp;
 
 namespace LyricAnimator
 {
-    internal sealed class AnimatorSkiaSharp
+    internal sealed class Animator
     {
         private const int Width = 1920;
         private const int Height = 1080;
