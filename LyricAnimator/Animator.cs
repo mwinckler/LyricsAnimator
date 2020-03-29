@@ -161,9 +161,6 @@ namespace LyricAnimator
                         canvas.DrawRect(new SKRect(0, 0, Width, Height), paint);
                     }
 
-                    // DEBUG: Attempt to fix text flicker
-                    canvas.Flush();
-
                     using var image = surface.Snapshot();
                     using var data = image.Encode(SKEncodedImageFormat.Png, 100);
                     using var ms = new MemoryStream(data.ToArray()) { Position = 0 };
@@ -248,6 +245,7 @@ namespace LyricAnimator
             lock (typefaceLock)
             {
                 canvas.DrawText(text, x, y, paint);
+                canvas.Flush();
             }
         }
 
