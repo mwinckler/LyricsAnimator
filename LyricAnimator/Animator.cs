@@ -14,6 +14,7 @@ namespace LyricAnimator
         private const int LyricsSideMargin = 200;
         private const int FramesPerSecond = 60;
         private const int TitleBarHeight = 100;
+        private const int BottomBarHeight = 50;
         private const int GradientBarHeight = 150;
         private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
@@ -21,7 +22,7 @@ namespace LyricAnimator
 
         // This is the y-position, in pixels, where the bottom of
         // the lyrics label should end up at the end of verse time.
-        private const float EndOfVerseY = Height / 3f;
+        private const float EndOfVerseY = Height / 2f;
 
         private readonly AppConfiguration appConfig;
         private readonly object typefaceLock;
@@ -49,7 +50,7 @@ namespace LyricAnimator
             using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family);
             using var verseTypeface = SKTypeface.FromFamilyName(appConfig.VerseFont.Family);
 
-            float? pixelsPerFrame = null;
+            var pixelsPerFrames = new List<float>();
 
             foreach (var lyric in config.Lyrics)
             {
@@ -61,23 +62,20 @@ namespace LyricAnimator
                     Width - LyricsSideMargin * 2
                 );
 
-                var distanceToMovePixels = textHeight + (desiredReadingY - EndOfVerseY);
+                // Assumes starting position at Height (offscreen)
+                var distanceToMovePixels = textHeight + (Height - EndOfVerseY);
 
                 // All lyrics need to move at the same speed, else it looks goofy.
-                // Calculate speed based on the first verse, then apply that speed
-                // to all subsequent verses, adjusting their start frame as necessary
-                // to reach the correct point at the correct time.
-                //
-                // This effectively means we ignore EndTime on all but the first lyric.
-                //
-                // TODO: An alternative approach might be to take the average speed
-                //       of all lyrics. Need to test to see if that actually works better.
-                if (!pixelsPerFrame.HasValue)
-                {
-                    var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
-                    pixelsPerFrame = pixelsPerSecond / FramesPerSecond;
-                }
+                // Find the maximum speed any verse needs, then apply to all verses.
+                // In general this should be close enough for similarly-sized verses.
+                var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
+                pixelsPerFrames.Add(pixelsPerSecond / FramesPerSecond);
+            }
 
+            var pixelsPerFrame = pixelsPerFrames.Average();
+
+            foreach (var lyric in config.Lyrics)
+            {
                 // This is the number of frames "ahead of time" we need to start
                 // rolling the lyric label so that at StartSeconds, the top of the
                 // label is fully visible
@@ -94,7 +92,7 @@ namespace LyricAnimator
 
                 var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * FramesPerSecond) + preRollFrames;
 
-                lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame.Value));
+                lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame));
             }
 
             // Calculate total frames required to animate all lyrics
@@ -204,11 +202,11 @@ namespace LyricAnimator
         {
             using var paint = new SKPaint();
             using var topGradient = SKShader.CreateLinearGradient(new SKPoint(0, TitleBarHeight), new SKPoint(0, TitleBarHeight + GradientBarHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
-            using var bottomGradient = SKShader.CreateLinearGradient(new SKPoint(0, Height), new SKPoint(0, Height - GradientBarHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
+            using var bottomGradient = SKShader.CreateLinearGradient(new SKPoint(0, Height - BottomBarHeight), new SKPoint(0, Height - BottomBarHeight - GradientBarHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
             paint.Shader = topGradient;
             canvas.DrawRect(0, TitleBarHeight, Width, GradientBarHeight, paint);
             paint.Shader = bottomGradient;
-            canvas.DrawRect(0, Height - GradientBarHeight, Width, Height, paint);
+            canvas.DrawRect(0, Height - BottomBarHeight - GradientBarHeight, Width, Height - BottomBarHeight, paint);
         }
 
         private static float CalculateTextHeight(SKTypeface typeface, float fontSize, IEnumerable<string> lines, float lineHeight, int maxWidth)
