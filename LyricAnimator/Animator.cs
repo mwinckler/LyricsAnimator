@@ -101,7 +101,11 @@ namespace LyricAnimator
             var postRollFrames = Math.Min(EndTransitionDissolveDurationFrames, EndOfVerseY / lastLyric.pixelsPerFrame);
             var totalFramesRequired = lastEndFrame + postRollFrames;
 
-            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFilePath, Path.Combine(outputDirectory.FullName, config.OutputFilename));
+            var outputFilePath = Path.Combine(outputDirectory.FullName, config.OutputFilename);
+
+            File.Delete(outputFilePath);
+
+            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFilePath, outputFilePath);
 
             var info = new SKImageInfo(Width, Height);
             using (var surface = SKSurface.Create(info))
