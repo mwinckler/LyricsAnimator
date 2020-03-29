@@ -24,10 +24,12 @@ namespace LyricAnimator
         private const float EndOfVerseY = Height / 3f;
 
         private readonly AppConfiguration appConfig;
+        private readonly object typefaceLock;
 
-        public Animator(AppConfiguration appConfig)
+        public Animator(AppConfiguration appConfig, object typefaceLock)
         {
             this.appConfig = appConfig;
+            this.typefaceLock = typefaceLock;
         }
 
         public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
@@ -193,7 +195,7 @@ namespace LyricAnimator
             canvas.DrawRect(new SKRect(0, 0, Width, TitleBarHeight), paint);
             canvas.DrawRect(new SKRect(0, Height - BottomBarHeight, Width, Height), paint);
             paint.Color = textColor;
-            canvas.DrawText(songTitle.ToUpper(), LyricsSideMargin, fontSize + (TitleBarHeight - fontSize) / 2, paint);
+            SafeDrawText(canvas, songTitle.ToUpper(), LyricsSideMargin, fontSize + (TitleBarHeight - fontSize) / 2, paint);
             paint.StrokeWidth = 3;
             canvas.DrawLine(LyricsSideMargin, TitleBarHeight, Width - LyricsSideMargin, TitleBarHeight, paint);
         }
@@ -215,7 +217,7 @@ namespace LyricAnimator
             return lines.SelectMany(line => WrapText(paint, line, maxWidth)).Count() * lineHeight;
         }
 
-        private static void DrawLyric(SKCanvas canvas, SKTypeface typeface, float fontSize, float lineHeight, IEnumerable<string> lines, float x, float y)
+        private void DrawLyric(SKCanvas canvas, SKTypeface typeface, float fontSize, float lineHeight, IEnumerable<string> lines, float x, float y)
         {
             using var paint = CreatePaint(typeface, fontSize);
 
@@ -225,18 +227,26 @@ namespace LyricAnimator
             {
                 foreach (var wrappedLine in WrapText(paint, lyricLine, Width - LyricsSideMargin * 2))
                 {
-                    canvas.DrawText(wrappedLine, x, y + i++ * lineHeight, paint);
+                    SafeDrawText(canvas, wrappedLine, x, y + i++ * lineHeight, paint);
                 }
 
                 i++;
             }
         }
 
-        private static void DrawVerseLabel(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor color, string text, float verseOpacity)
+        private void DrawVerseLabel(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor color, string text, float verseOpacity)
         {
             using var paint = CreatePaint(typeface, fontSize, color.WithAlpha((byte)(verseOpacity * 255)));
             var labelWidth = paint.MeasureText(text);
-            canvas.DrawText(text, Width - VerseLabelMargin - labelWidth, Height - GradientBarHeight / 2, paint);
+            SafeDrawText(canvas, text, Width - VerseLabelMargin - labelWidth, Height - GradientBarHeight / 2, paint);
+        }
+
+        private void SafeDrawText(SKCanvas canvas, string text, float x, float y, SKPaint paint)
+        {
+            lock (typefaceLock)
+            {
+                canvas.DrawText(text, x, y, paint);
+            }
         }
 
         private static SKPaint CreatePaint(SKTypeface typeface, float fontSize) => CreatePaint(typeface, fontSize, SKColors.White);

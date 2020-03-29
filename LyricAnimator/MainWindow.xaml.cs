@@ -113,6 +113,14 @@ namespace LyricAnimator
         private string configDirectory;
         private string pathToFfmpeg;
 
+        // Something in skia's DrawText is not thread safe, as
+        // when multithreading, occasionally a text glyph will be
+        // replaced with an unknown character box. This lock is used
+        // by all animators to ensure only one attempts to draw text
+        // at a time.
+        private readonly object skiaTypefaceLock = new object();
+        private readonly object configFileLock = new object();
+
         public MainWindowViewModel()
         {
             appConfig = InitializeSystemConfig();
@@ -157,7 +165,7 @@ namespace LyricAnimator
             var pngOutputDir = SaveFrames
                 ? Directory.CreateDirectory(Path.Combine(outputDir.FullName, Path.Combine($"png_{config.OutputFilename}")))
                 : null;
-            new Animator(appConfig).Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
+            new Animator(appConfig, skiaTypefaceLock).Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
         }
 
         private Action<float> ProgressReporterFactory(string identifier) =>
