@@ -23,7 +23,14 @@ namespace LyricAnimator
         // the lyrics label should end up at the end of verse time.
         private const float EndOfVerseY = Height / 3f;
 
-        public void Animate(Action<float> reportProgress, Configuration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
+        private readonly AppConfiguration appConfig;
+
+        public Animator(AppConfiguration appConfig)
+        {
+            this.appConfig = appConfig;
+        }
+
+        public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
         {
             var lyrics = new List<(
                 Lyric lyric,
@@ -36,9 +43,9 @@ namespace LyricAnimator
 
             var desiredReadingY = Height * 2 / 3;
 
-            using var titleTypeface = SKTypeface.FromFamilyName(config.TitleFont.Family);
-            using var lyricTypeface = SKTypeface.FromFamilyName(config.LyricsFont.Family);
-            using var verseTypeface = SKTypeface.FromFamilyName(config.VerseFont.Family);
+            using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family);
+            using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family);
+            using var verseTypeface = SKTypeface.FromFamilyName(appConfig.VerseFont.Family);
 
             float? pixelsPerFrame = null;
 
@@ -46,9 +53,9 @@ namespace LyricAnimator
             {
                 var textHeight = CalculateTextHeight(
                     lyricTypeface,
-                    config.LyricsFont.Size,
+                    appConfig.LyricsFont.Size,
                     lyric.Lines,
-                    config.LyricsFont.Size + config.LyricsFont.LineMargin,
+                    appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin,
                     Width - LyricsSideMargin * 2
                 );
 
@@ -118,7 +125,7 @@ namespace LyricAnimator
                         }
 
                         var y = lyric.startTop - lyric.pixelsPerFrame * (frame - lyric.startFrame);
-                        DrawLyric(canvas, lyricTypeface, config.LyricsFont.Size, config.LyricsFont.Size + config.LyricsFont.LineMargin, lyric.lyric.Lines, x: LyricsSideMargin, y);
+                        DrawLyric(canvas, lyricTypeface, appConfig.LyricsFont.Size, appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin, lyric.lyric.Lines, x: LyricsSideMargin, y);
 
                         if (frame > lyric.startFrame + lyric.preRollFrames && lyric.lyric.VerseNumber > 0)
                         {
@@ -137,10 +144,10 @@ namespace LyricAnimator
 
                     if (!string.IsNullOrEmpty(verseLabel))
                     {
-                        DrawVerseLabel(canvas, verseTypeface, config.VerseFont.Size, SKColor.Parse(config.VerseFont.HexColor), verseLabel, verseOpacity);
+                        DrawVerseLabel(canvas, verseTypeface, appConfig.VerseFont.Size, SKColor.Parse(appConfig.VerseFont.HexColor), verseLabel, verseOpacity);
                     }
 
-                    DrawTitleBar(canvas, titleTypeface, config.TitleFont.Size, SKColor.Parse(config.TitleFont.HexColor), config.SongTitle);
+                    DrawTitleAndFooterBars(canvas, titleTypeface, appConfig.TitleFont.Size, SKColor.Parse(appConfig.TitleFont.HexColor), config.SongTitle);
 
                     if (totalFramesRequired - frame <= EndTransitionDissolveDurationFrames)
                     {
@@ -180,10 +187,11 @@ namespace LyricAnimator
             ffmpegProcess.WaitForExit();
         }
 
-        private void DrawTitleBar(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor textColor, string songTitle)
+        private void DrawTitleAndFooterBars(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor textColor, string songTitle)
         {
             using var paint = CreatePaint(typeface, fontSize, SKColors.Black);
             canvas.DrawRect(new SKRect(0, 0, Width, TitleBarHeight), paint);
+            canvas.DrawRect(new SKRect(0, Height - BottomBarHeight, Width, Height), paint);
             paint.Color = textColor;
             canvas.DrawText(songTitle.ToUpper(), LyricsSideMargin, fontSize + (TitleBarHeight - fontSize) / 2, paint);
             paint.StrokeWidth = 3;

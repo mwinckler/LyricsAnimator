@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -8,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using Newtonsoft.Json;
 
 namespace LyricAnimator
 {
@@ -25,9 +25,52 @@ namespace LyricAnimator
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public string PathToFfmpeg { get; set; }
-        public string ConfigDirectory { get; set; }
-        public string OutputDirectory { get; set; }
+        private const string configFilePath = "./config.json";
+
+        public string PathToFfmpeg
+        {
+            get => pathToFfmpeg;
+            set
+            {
+                if (pathToFfmpeg == value)
+                {
+                    return;
+                }
+
+                pathToFfmpeg = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public string ConfigDirectory
+        {
+            get => configDirectory;
+            set {
+                if (configDirectory == value)
+                {
+                    return;
+                }
+
+                configDirectory = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public string OutputDirectory
+        {
+            get => outputDirectory;
+            set
+            {
+                if (outputDirectory == value)
+                {
+                    return;
+                }
+
+                outputDirectory = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public ICommand Command { get; }
 
         public int Progress
@@ -62,15 +105,21 @@ namespace LyricAnimator
         public bool RunInParallel { get; set; }
         public bool SaveFrames { get; set; }
 
+        private AppConfiguration appConfig;
         private int progress;
         private string progressDetails;
         private ConcurrentDictionary<string, float> progresses;
+        private string outputDirectory;
+        private string configDirectory;
+        private string pathToFfmpeg;
 
         public MainWindowViewModel()
         {
-            PathToFfmpeg = @"c:\Users\mattw\bin\ffmpeg.exe";
-            ConfigDirectory = @"C:\tmp\animations\config";
-            OutputDirectory = @"C:\tmp\animations\output_new";
+            appConfig = InitializeSystemConfig();
+
+            pathToFfmpeg = appConfig.FfmpegPath;
+            configDirectory = appConfig.SongConfigPath;
+            outputDirectory = appConfig.OutputPath;
 
             Command = new Command(async () =>
             {
@@ -92,13 +141,23 @@ namespace LyricAnimator
             });
         }
 
+        private static AppConfiguration InitializeSystemConfig()
+        {
+            if (!File.Exists(configFilePath))
+            {
+                return new AppConfiguration();
+            }
+
+            return JsonConvert.DeserializeObject<AppConfiguration>(File.ReadAllText(configFilePath));
+        }
+
         private void ProcessConfigFile(string filePath, DirectoryInfo outputDir)
         {
-            var config = Configuration.LoadFromFile(filePath);
+            var config = SongConfiguration.LoadFromFile(filePath);
             var pngOutputDir = SaveFrames
                 ? Directory.CreateDirectory(Path.Combine(outputDir.FullName, Path.Combine($"png_{config.OutputFilename}")))
                 : null;
-            new Animator().Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
+            new Animator(appConfig).Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
         }
 
         private Action<float> ProgressReporterFactory(string identifier) =>
@@ -119,7 +178,22 @@ namespace LyricAnimator
             Progress = 0;
         }
 
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = null) =>
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
+        {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            UpdateConfigurationFile();
+        }
+
+        private void UpdateConfigurationFile()
+        {
+            appConfig.FfmpegPath = PathToFfmpeg;
+            appConfig.SongConfigPath = ConfigDirectory;
+            appConfig.OutputPath = OutputDirectory;
+
+            lock (configFileLock)
+            {
+                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(appConfig));
+            }
+        }
     }
 }
