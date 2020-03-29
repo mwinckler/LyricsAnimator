@@ -72,7 +72,7 @@ namespace LyricAnimator
                 pixelsPerFrames.Add(pixelsPerSecond / FramesPerSecond);
             }
 
-            var pixelsPerFrame = pixelsPerFrames.Average();
+            var pixelsPerFrame = pixelsPerFrames.Min();
 
             foreach (var lyric in config.Lyrics)
             {
