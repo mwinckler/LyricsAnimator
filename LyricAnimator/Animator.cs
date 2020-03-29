@@ -44,7 +44,7 @@ namespace LyricAnimator
                 float pixelsPerFrame
             )>();
 
-            var desiredReadingY = Height * 2 / 3;
+            var desiredReadingY = Height * 3 / 4;
 
             using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family);
             using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family);
