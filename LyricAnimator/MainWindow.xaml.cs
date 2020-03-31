@@ -46,7 +46,8 @@ namespace LyricAnimator
         public string ConfigDirectory
         {
             get => configDirectory;
-            set {
+            set
+            {
                 if (configDirectory == value)
                 {
                     return;
@@ -72,12 +73,11 @@ namespace LyricAnimator
             }
         }
 
-        public ICommand Command { get; }
-
         public int Progress
         {
             get => progress;
-            private set {
+            private set
+            {
                 if (progress == value)
                 {
                     return;
@@ -103,9 +103,44 @@ namespace LyricAnimator
             }
         }
 
+        public Visibility ConfigurationPageVisibility
+        {
+            get => configurationPageVisibility;
+            set
+            {
+                if (configurationPageVisibility == value)
+                {
+                    return;
+                }
+
+                configurationPageVisibility = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public AppConfiguration Configuration
+        {
+            get => appConfig;
+            set
+            {
+                if (appConfig == value)
+                {
+                    return;
+                }
+
+                appConfig = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public bool RunInParallel { get; set; }
         public bool SaveFrames { get; set; }
+        public ICommand CreateVideosCommand { get; }
+        public ICommand ToggleConfigurationCommand { get; }
+        public ICommand SaveConfigurationCommand { get; }
+        public ICommand ResetDefaultsCommand { get; }
 
+        private Visibility configurationPageVisibility;
         private AppConfiguration appConfig;
         private int progress;
         private string progressDetails;
@@ -121,6 +156,7 @@ namespace LyricAnimator
         // at a time.
         private readonly object skiaTypefaceLock = new object();
         private readonly object configFileLock = new object();
+        private readonly string[] autoCommitConfigPropertyNames = new[] {nameof(PathToFfmpeg), nameof(ConfigDirectory), nameof(OutputDirectory)};
 
         public MainWindowViewModel()
         {
@@ -130,7 +166,9 @@ namespace LyricAnimator
             configDirectory = appConfig.SongConfigPath;
             outputDirectory = appConfig.OutputPath;
 
-            Command = new Command(async () =>
+            ConfigurationPageVisibility = Visibility.Collapsed;
+
+            CreateVideosCommand = new Command(async () =>
             {
                 var outputDir = Directory.CreateDirectory(OutputDirectory);
                 ResetProgress();
@@ -148,6 +186,40 @@ namespace LyricAnimator
                     await Task.Run(() => ProcessConfigFile(filePath, outputDir));
                 }
             });
+
+            string cachedAppJson = null;
+
+            ToggleConfigurationCommand = new Command(() =>
+            {
+                ToggleConfigurationPageVisibility();
+
+                if (ConfigurationPageVisibility == Visibility.Visible)
+                {
+                    cachedAppJson = SerializeConfiguration(appConfig);
+                }
+                else
+                {
+                    appConfig = DeserializeConfiguration(cachedAppJson);
+                    NotifyPropertyChanged(nameof(Configuration));
+                }
+            });
+
+            SaveConfigurationCommand = new Command(() =>
+            {
+                UpdateConfigurationFile();
+                ToggleConfigurationPageVisibility();
+            });
+
+            ResetDefaultsCommand = new Command(() =>
+            {
+                Configuration = new AppConfiguration();
+                NotifyPropertyChanged(nameof(Configuration));
+            });
+        }
+
+        private void ToggleConfigurationPageVisibility()
+        {
+            ConfigurationPageVisibility = ConfigurationPageVisibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private static AppConfiguration InitializeSystemConfig()
@@ -190,7 +262,11 @@ namespace LyricAnimator
         private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            UpdateConfigurationFile();
+
+            if (autoCommitConfigPropertyNames.Contains(propertyName))
+            {
+                UpdateConfigurationFile();
+            }
         }
 
         private void UpdateConfigurationFile()
@@ -201,8 +277,12 @@ namespace LyricAnimator
 
             lock (configFileLock)
             {
-                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(appConfig, Formatting.Indented));
+                File.WriteAllText(configFilePath, SerializeConfiguration(appConfig));
             }
         }
+
+        private static string SerializeConfiguration(AppConfiguration config) => JsonConvert.SerializeObject(config, Formatting.Indented);
+
+        private static AppConfiguration DeserializeConfiguration(string configJson) => JsonConvert.DeserializeObject<AppConfiguration>(configJson);
     }
 }
