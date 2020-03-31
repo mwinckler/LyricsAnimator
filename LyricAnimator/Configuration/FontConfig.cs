@@ -1,6 +1,6 @@
 ﻿namespace LyricAnimator.Configuration
 {
-    internal class FontConfig
+    internal sealed class FontConfig
     {
         public string Family { get; set; } = "Open Sans";
         public float Size { get; set; } = 72f;

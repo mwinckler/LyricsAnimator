@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace LyricAnimator.Configuration
 {
-    internal class SongConfiguration
+    internal sealed class SongConfiguration
     {
         public string SongTitle { get; set; }
         public string AudioFilePath { get; set; }

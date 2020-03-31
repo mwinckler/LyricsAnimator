@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LyricAnimator.Configuration
 {
-    internal class Lyric
+    internal sealed class Lyric
     {
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }

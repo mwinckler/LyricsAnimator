@@ -93,6 +93,7 @@
     </Compile>
     <Compile Include="Command.cs" />
     <Compile Include="Configuration\AppConfiguration.cs" />
+    <Compile Include="Configuration\DimensionsConfig.cs" />
     <Compile Include="Configuration\FontConfig.cs" />
     <Compile Include="Configuration\Lyric.cs" />
     <Compile Include="Configuration\SongConfiguration.cs" />
