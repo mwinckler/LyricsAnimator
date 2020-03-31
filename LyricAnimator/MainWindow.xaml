@@ -3,10 +3,12 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:lyricAnimator="clr-namespace:LyricAnimator"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Lyrics Animator"
     Width="440"
     Height="400"
+    d:DataContext="{d:DesignInstance lyricAnimator:MainWindowViewModel}"
     Background="White"
     mc:Ignorable="d">
     <Window.Resources>
@@ -14,62 +16,111 @@
             <Setter Property="BorderThickness" Value="10" />
             <Setter Property="BorderBrush" Value="White" />
         </Style>
+
+        <Style TargetType="{x:Type Label}">
+            <Setter Property="Width" Value="150" />
+        </Style>
+
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Width" Value="250" />
+        </Style>
+
+        <Style TargetType="{x:Type StackPanel}">
+            <Setter Property="Margin" Value="0,5" />
+        </Style>
+
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="120" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="10,5" />
+        </Style>
     </Window.Resources>
 
-    <Border>
-        <StackPanel>
-            <StackPanel.Resources>
-                <Style TargetType="{x:Type Label}">
-                    <Setter Property="Width" Value="150" />
-                </Style>
+    <Grid>
+        <Border>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Path to ffmpeg.exe:</Label>
+                    <TextBox Text="{Binding PathToFfmpeg}" />
+                </StackPanel>
 
-                <Style TargetType="{x:Type TextBox}">
-                    <Setter Property="Width" Value="250" />
-                </Style>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Config directory:</Label>
+                    <TextBox Text="{Binding ConfigDirectory}" />
+                </StackPanel>
 
-                <Style TargetType="{x:Type StackPanel}">
-                    <Setter Property="Margin" Value="0,5" />
-                </Style>
-            </StackPanel.Resources>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Output directory:</Label>
+                    <TextBox Text="{Binding OutputDirectory}" />
+                </StackPanel>
 
-            <StackPanel Orientation="Horizontal">
-                <Label>Path to ffmpeg:</Label>
-                <TextBox Text="{Binding PathToFfmpeg}" />
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="Run in parallel (experimental)" IsChecked="{Binding RunInParallel}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="Save frame .png files" IsChecked="{Binding SaveFrames}" />
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button Command="{Binding ToggleConfigurationCommand}">
+                        More options
+                    </Button>
+
+                    <Button Command="{Binding CreateVideosCommand}">
+                        Create lyric videos
+                    </Button>
+                </StackPanel>
+
+                <ProgressBar
+                    Height="20"
+                    Margin="10"
+                    Maximum="100"
+                    Minimum="0"
+                    Value="{Binding Progress, Mode=OneWay}" />
+
+                <Label Width="400" Content="{Binding ProgressDetails, Mode=OneWay}" />
             </StackPanel>
+        </Border>
 
-            <StackPanel Orientation="Horizontal">
-                <Label>Config directory:</Label>
-                <TextBox Text="{Binding ConfigDirectory}" />
+        <Border Background="White" Visibility="{Binding ConfigurationPageVisibility}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Output width:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.Width}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label>Output height:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.Height}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label>Lyrics side margin:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.SideMargin}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label>Title header height:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.HeaderHeight}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label>Footer height:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.FooterHeight}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label>Gradient height:</Label>
+                    <TextBox Text="{Binding Configuration.OutputDimensions.GradientHeight}" />
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button Command="{Binding ResetDefaultsCommand}">Reset defaults</Button>
+                    <Button Command="{Binding ToggleConfigurationCommand}">Cancel</Button>
+                    <Button Command="{Binding SaveConfigurationCommand}">Save</Button>
+                </StackPanel>
             </StackPanel>
-
-            <StackPanel Orientation="Horizontal">
-                <Label>Output directory:</Label>
-                <TextBox Text="{Binding OutputDirectory}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal">
-                <CheckBox Content="Run in parallel (experimental)" IsChecked="{Binding RunInParallel}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal">
-                <CheckBox Content="Save frame .png files" IsChecked="{Binding SaveFrames}" />
-            </StackPanel>
-
-            <Button
-                Width="120"
-                Height="30"
-                Command="{Binding Command}">
-                Create lyric videos
-            </Button>
-
-            <ProgressBar
-                Height="20"
-                Margin="10"
-                Maximum="100"
-                Minimum="0"
-                Value="{Binding Progress, Mode=OneWay}" />
-
-            <Label Width="400" Content="{Binding ProgressDetails, Mode=OneWay}" />
-        </StackPanel>
-    </Border>
+        </Border>
+    </Grid>
 </Window>
