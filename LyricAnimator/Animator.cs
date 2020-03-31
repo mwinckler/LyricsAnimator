@@ -10,28 +10,38 @@ namespace LyricAnimator
 {
     internal sealed class Animator
     {
-        private const int Width = 1280;
-        private const int Height = 720;
-        private const int LyricsSideMargin = 100;
         private const int FramesPerSecond = 60;
-        private const int TitleBarHeight = 80;
-        private const int BottomBarHeight = 50;
-        private const int GradientBarHeight = 100;
         private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
         private const int EndTransitionDissolveDurationFrames = 120;
 
-        // This is the y-position, in pixels, where the bottom of
-        // the lyrics label should end up at the end of verse time.
-        private const float EndOfVerseY = Height / 2f;
-
         private readonly AppConfiguration appConfig;
         private readonly object typefaceLock;
+
+        private readonly int width;
+        private readonly int height;
+        private readonly int sideMargin;
+        private readonly int headerHeight;
+        private readonly int footerHeight;
+        private readonly int gradientHeight;
+
+        // This is the y-position, in pixels, where the bottom of
+        // the lyrics label should end up at the end of verse time.
+        private readonly float endOfVerseY;
 
         public Animator(AppConfiguration appConfig, object typefaceLock)
         {
             this.appConfig = appConfig;
             this.typefaceLock = typefaceLock;
+
+            width = appConfig.OutputDimensions.Width;
+            height = appConfig.OutputDimensions.Height;
+            sideMargin = appConfig.OutputDimensions.SideMargin;
+            headerHeight = appConfig.OutputDimensions.HeaderHeight;
+            footerHeight = appConfig.OutputDimensions.FooterHeight;
+            gradientHeight = appConfig.OutputDimensions.GradientHeight;
+
+            endOfVerseY = height / 2f;
         }
 
         public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
@@ -45,7 +55,7 @@ namespace LyricAnimator
                 float pixelsPerFrame
             )>();
 
-            var desiredReadingY = Height * 3 / 4;
+            var desiredReadingY = height * 3 / 4;
 
             using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family);
             using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family);
@@ -60,11 +70,11 @@ namespace LyricAnimator
                     appConfig.LyricsFont.Size,
                     lyric.Lines,
                     appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin,
-                    Width - LyricsSideMargin * 2
+                    width - sideMargin * 2
                 );
 
                 // Assumes starting position at Height (offscreen)
-                var distanceToMovePixels = textHeight + (Height - EndOfVerseY);
+                var distanceToMovePixels = textHeight + (height - endOfVerseY);
 
                 // All lyrics need to move at the same speed, else it looks goofy.
                 // Find the maximum speed any verse needs, then apply to all verses.
@@ -80,14 +90,14 @@ namespace LyricAnimator
                 // This is the number of frames "ahead of time" we need to start
                 // rolling the lyric label so that at StartSeconds, the top of the
                 // label is fully visible
-                var preRollFrames = (int)((Height - desiredReadingY) / pixelsPerFrame);
+                var preRollFrames = (int)((height - desiredReadingY) / pixelsPerFrame);
                 var startFrame = (int)(lyric.StartTime.TotalSeconds * FramesPerSecond - preRollFrames);
-                var startTop = Height;
+                var startTop = height;
 
                 if (startFrame < 0)
                 {
                     // Start the textbox higher up than completely off screen
-                    startTop = (int)(Height - pixelsPerFrame * Math.Abs(startFrame));
+                    startTop = (int)(height - pixelsPerFrame * Math.Abs(startFrame));
                     startFrame = 0;
                 }
 
@@ -99,7 +109,7 @@ namespace LyricAnimator
             // Calculate total frames required to animate all lyrics
             var lastEndFrame = lyrics.Max(lyric => lyric.endFrame);
             var lastLyric = lyrics.First(lyric => lyric.endFrame == lastEndFrame);
-            var postRollFrames = Math.Min(EndTransitionDissolveDurationFrames, EndOfVerseY / lastLyric.pixelsPerFrame);
+            var postRollFrames = Math.Min(EndTransitionDissolveDurationFrames, endOfVerseY / lastLyric.pixelsPerFrame);
             var totalFramesRequired = lastEndFrame + postRollFrames;
 
             var outputFilePath = Path.Combine(outputDirectory.FullName, config.OutputFilename);
@@ -108,7 +118,7 @@ namespace LyricAnimator
 
             var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFilePath, outputFilePath);
 
-            var info = new SKImageInfo(Width, Height);
+            var info = new SKImageInfo(width, height);
             using (var surface = SKSurface.Create(info))
             {
                 var canvas = surface.Canvas;
@@ -130,7 +140,7 @@ namespace LyricAnimator
                         }
 
                         var y = lyric.startTop - lyric.pixelsPerFrame * (frame - lyric.startFrame);
-                        DrawLyric(canvas, lyricTypeface, appConfig.LyricsFont.Size, appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin, lyric.lyric.Lines, x: LyricsSideMargin, y);
+                        DrawLyric(canvas, lyricTypeface, appConfig.LyricsFont.Size, appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin, lyric.lyric.Lines, x: sideMargin, y);
 
                         if (frame > lyric.startFrame + lyric.preRollFrames && lyric.lyric.VerseNumber > 0)
                         {
@@ -159,7 +169,7 @@ namespace LyricAnimator
                         using var paint = new SKPaint {
                             Color = SKColors.Black.WithAlpha((byte)((1 - (totalFramesRequired - frame) / EndTransitionDissolveDurationFrames) * 255))
                         };
-                        canvas.DrawRect(new SKRect(0, 0, Width, Height), paint);
+                        canvas.DrawRect(new SKRect(0, 0, width, height), paint);
                     }
 
                     using var image = surface.Snapshot();
@@ -192,23 +202,23 @@ namespace LyricAnimator
         private void DrawTitleAndFooterBars(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor textColor, string songTitle)
         {
             using var paint = CreatePaint(typeface, fontSize, SKColors.Black);
-            canvas.DrawRect(new SKRect(0, 0, Width, TitleBarHeight), paint);
-            canvas.DrawRect(new SKRect(0, Height - BottomBarHeight, Width, Height), paint);
+            canvas.DrawRect(new SKRect(0, 0, width, headerHeight), paint);
+            canvas.DrawRect(new SKRect(0, height - footerHeight, width, height), paint);
             paint.Color = textColor;
-            SafeDrawText(canvas, songTitle.ToUpper(), LyricsSideMargin, fontSize + (TitleBarHeight - fontSize) / 2, paint);
+            SafeDrawText(canvas, songTitle.ToUpper(), sideMargin, fontSize + (headerHeight - fontSize) / 2, paint);
             paint.StrokeWidth = 3;
-            canvas.DrawLine(LyricsSideMargin, TitleBarHeight, Width - LyricsSideMargin, TitleBarHeight, paint);
+            canvas.DrawLine(sideMargin, headerHeight, width - sideMargin, headerHeight, paint);
         }
 
-        private static void DrawGradientOverlays(SKCanvas canvas)
+        private void DrawGradientOverlays(SKCanvas canvas)
         {
             using var paint = new SKPaint();
-            using var topGradient = SKShader.CreateLinearGradient(new SKPoint(0, TitleBarHeight), new SKPoint(0, TitleBarHeight + GradientBarHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
-            using var bottomGradient = SKShader.CreateLinearGradient(new SKPoint(0, Height - BottomBarHeight), new SKPoint(0, Height - BottomBarHeight - GradientBarHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
+            using var topGradient = SKShader.CreateLinearGradient(new SKPoint(0, headerHeight), new SKPoint(0, headerHeight + gradientHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
+            using var bottomGradient = SKShader.CreateLinearGradient(new SKPoint(0, height - footerHeight), new SKPoint(0, height - footerHeight - gradientHeight), new[] { SKColors.Black, SKColors.Black.WithAlpha(0) }, SKShaderTileMode.Clamp);
             paint.Shader = topGradient;
-            canvas.DrawRect(0, TitleBarHeight, Width, GradientBarHeight, paint);
+            canvas.DrawRect(0, headerHeight, width, gradientHeight, paint);
             paint.Shader = bottomGradient;
-            canvas.DrawRect(0, Height - BottomBarHeight - GradientBarHeight, Width, Height - BottomBarHeight, paint);
+            canvas.DrawRect(0, height - footerHeight - gradientHeight, width, height - footerHeight, paint);
         }
 
         private static float CalculateTextHeight(SKTypeface typeface, float fontSize, IEnumerable<string> lines, float lineHeight, int maxWidth)
@@ -225,7 +235,7 @@ namespace LyricAnimator
 
             foreach (var lyricLine in lines)
             {
-                foreach (var wrappedLine in WrapText(paint, lyricLine, Width - LyricsSideMargin * 2))
+                foreach (var wrappedLine in WrapText(paint, lyricLine, width - sideMargin * 2))
                 {
                     SafeDrawText(canvas, wrappedLine, x, y + i++ * lineHeight, paint);
                 }
@@ -238,7 +248,7 @@ namespace LyricAnimator
         {
             using var paint = CreatePaint(typeface, fontSize, color.WithAlpha((byte)(verseOpacity * 255)));
             var labelWidth = paint.MeasureText(text);
-            SafeDrawText(canvas, text, Width - VerseLabelMargin - labelWidth, Height - GradientBarHeight / 2, paint);
+            SafeDrawText(canvas, text, width - VerseLabelMargin - labelWidth, height - gradientHeight / 2, paint);
         }
 
         private void SafeDrawText(SKCanvas canvas, string text, float x, float y, SKPaint paint)
