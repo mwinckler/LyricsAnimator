@@ -9,13 +9,13 @@ namespace LyricAnimator
 {
     internal sealed class Animator
     {
-        private const int Width = 1920;
-        private const int Height = 1080;
-        private const int LyricsSideMargin = 200;
+        private const int Width = 1280;
+        private const int Height = 720;
+        private const int LyricsSideMargin = 100;
         private const int FramesPerSecond = 60;
-        private const int TitleBarHeight = 100;
+        private const int TitleBarHeight = 80;
         private const int BottomBarHeight = 50;
-        private const int GradientBarHeight = 150;
+        private const int GradientBarHeight = 100;
         private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
         private const int EndTransitionDissolveDurationFrames = 120;
