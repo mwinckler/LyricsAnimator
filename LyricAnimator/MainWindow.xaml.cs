@@ -201,7 +201,7 @@ namespace LyricAnimator
 
             lock (configFileLock)
             {
-                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(appConfig));
+                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(appConfig, Formatting.Indented));
             }
         }
     }
