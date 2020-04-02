@@ -10,7 +10,6 @@ namespace LyricAnimator
 {
     internal sealed class Animator
     {
-        private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
         private const int EndTransitionDissolveDurationFrames = 120;
 
@@ -126,8 +125,7 @@ namespace LyricAnimator
                 {
                     reportProgress(frame / totalFramesRequired);
 
-                    var verseLabel = string.Empty;
-                    var verseOpacity = 1f;
+                    var verseLabels = new List<(string text, float y, float opacity)>();
 
                     canvas.Clear(SKColors.Black);
 
@@ -141,24 +139,34 @@ namespace LyricAnimator
                         var y = lyric.startTop - lyric.pixelsPerFrame * (frame - lyric.startFrame);
                         DrawLyric(canvas, lyricTypeface, appConfig.LyricsFont.Size, appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin, lyric.lyric.Lines, x: sideMargin, y);
 
-                        if (frame > lyric.startFrame + lyric.preRollFrames && lyric.lyric.VerseNumber > 0)
+                        if (frame > lyric.startFrame - lyric.preRollFrames && lyric.lyric.VerseNumber > 0)
                         {
-                            if (frame >= lyric.startFrame)
-                            {
-                                verseLabel = $"verse {lyric.lyric.VerseNumber}";
+                            var opacity = frame < lyric.endFrame - DissolveAnimationDurationFrames
+                                ? Math.Min(1f, (float) (frame - lyric.startFrame) / DissolveAnimationDurationFrames)
+                                : Math.Max(0f, (float) (lyric.endFrame - frame) / DissolveAnimationDurationFrames);
 
-                                verseOpacity = frame < lyric.endFrame - DissolveAnimationDurationFrames
-                                    ? Math.Min(1f, (float) (frame - lyric.startFrame) / DissolveAnimationDurationFrames)
-                                    : Math.Max(0f, (float) (lyric.endFrame - frame) / DissolveAnimationDurationFrames);
-                            }
+                            verseLabels.Add((
+                                $"verse {lyric.lyric.VerseNumber}",
+                                Math.Max(y - appConfig.VerseFont.Size, headerHeight + appConfig.VerseFont.Size),
+                                opacity
+                            ));
                         }
                     }
 
                     DrawGradientOverlays(canvas);
 
-                    if (!string.IsNullOrEmpty(verseLabel))
+                    foreach (var verseLabel in verseLabels)
                     {
-                        DrawVerseLabel(canvas, verseTypeface, appConfig.VerseFont.Size, SKColor.Parse(appConfig.VerseFont.HexColor), verseLabel, verseOpacity);
+                        DrawVerseLabel(
+                            canvas,
+                            verseTypeface,
+                            appConfig.VerseFont.Size,
+                            SKColor.Parse(appConfig.VerseFont.HexColor),
+                            verseLabel.text,
+                            width - sideMargin,
+                            verseLabel.y,
+                            verseLabel.opacity
+                        );
                     }
 
                     DrawTitleAndFooterBars(canvas, titleTypeface, appConfig.TitleFont.Size, SKColor.Parse(appConfig.TitleFont.HexColor), config.SongTitle);
@@ -243,11 +251,10 @@ namespace LyricAnimator
             }
         }
 
-        private void DrawVerseLabel(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor color, string text, float verseOpacity)
+        private void DrawVerseLabel(SKCanvas canvas, SKTypeface typeface, float fontSize, SKColor color, string text, float x, float y, float verseOpacity)
         {
             using var paint = CreatePaint(typeface, fontSize, color.WithAlpha((byte)(verseOpacity * 255)));
-            var labelWidth = paint.MeasureText(text);
-            SafeDrawText(canvas, text, width - VerseLabelMargin - labelWidth, height - gradientHeight / 2, paint);
+            SafeDrawText(canvas, text, x, y, paint);
         }
 
         private void SafeDrawText(SKCanvas canvas, string text, float x, float y, SKPaint paint)
