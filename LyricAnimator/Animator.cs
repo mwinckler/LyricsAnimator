@@ -10,7 +10,6 @@ namespace LyricAnimator
 {
     internal sealed class Animator
     {
-        private const int FramesPerSecond = 60;
         private const int VerseLabelMargin = 100;
         private const int DissolveAnimationDurationFrames = 60;
         private const int EndTransitionDissolveDurationFrames = 120;
@@ -80,7 +79,7 @@ namespace LyricAnimator
                 // Find the maximum speed any verse needs, then apply to all verses.
                 // In general this should be close enough for similarly-sized verses.
                 var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
-                pixelsPerFrames.Add(pixelsPerSecond / FramesPerSecond);
+                pixelsPerFrames.Add(pixelsPerSecond / appConfig.FramesPerSecond);
             }
 
             var pixelsPerFrame = pixelsPerFrames.Min();
@@ -91,7 +90,7 @@ namespace LyricAnimator
                 // rolling the lyric label so that at StartSeconds, the top of the
                 // label is fully visible
                 var preRollFrames = (int)((height - desiredReadingY) / pixelsPerFrame);
-                var startFrame = (int)(lyric.StartTime.TotalSeconds * FramesPerSecond - preRollFrames);
+                var startFrame = (int)(lyric.StartTime.TotalSeconds * appConfig.FramesPerSecond - preRollFrames);
                 var startTop = height;
 
                 if (startFrame < 0)
@@ -101,7 +100,7 @@ namespace LyricAnimator
                     startFrame = 0;
                 }
 
-                var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * FramesPerSecond) + preRollFrames;
+                var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * appConfig.FramesPerSecond) + preRollFrames;
 
                 lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame));
             }
@@ -116,7 +115,7 @@ namespace LyricAnimator
 
             File.Delete(outputFilePath);
 
-            var ffmpegProcess = StartFfmpeg(ffmpegExePath, config.AudioFilePath, outputFilePath);
+            var ffmpegProcess = StartFfmpeg(appConfig, config.AudioFilePath, outputFilePath);
 
             var info = new SKImageInfo(width, height);
             using (var surface = SKSurface.Create(info))
@@ -307,14 +306,14 @@ namespace LyricAnimator
             return wrappedLines;
         }
 
-        private static Process StartFfmpeg(string ffmpegExePath, string audioFilePath, string outputFilePath)
+        private static Process StartFfmpeg(AppConfiguration appConfig, string audioFilePath, string outputFilePath)
         {
             var proc = new Process
             {
                 StartInfo =
             {
-                FileName = ffmpegExePath,
-                Arguments = $"-framerate {FramesPerSecond} -f image2pipe -i - -i {audioFilePath} {outputFilePath}",
+                FileName = appConfig.FfmpegPath,
+                Arguments = $"-framerate {appConfig.FramesPerSecond} -f image2pipe -i - -i {audioFilePath} {outputFilePath}",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardInput = true,

@@ -11,7 +11,7 @@ namespace LyricAnimator.Configuration
         public string FfmpegPath { get; set; }
         public string SongConfigPath { get; set; } = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         public string OutputPath { get; set; } = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "output");
-
+        public int FramesPerSecond { get; set; } = 60;
         public DimensionsConfig OutputDimensions { get; set; } = new DimensionsConfig();
     }
 }

@@ -115,6 +115,12 @@
                     <TextBox Text="{Binding Configuration.OutputDimensions.GradientHeight}" />
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal">
+                    <Label>Frames per second:</Label>
+                    <TextBox Text="{Binding Configuration.FramesPerSecond}" />
+                </StackPanel>
+
+
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                     <Button Command="{Binding ResetDefaultsCommand}">Reset defaults</Button>
                     <Button Command="{Binding ToggleConfigurationCommand}">Cancel</Button>
