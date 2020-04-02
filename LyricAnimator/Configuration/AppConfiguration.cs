@@ -7,7 +7,7 @@ namespace LyricAnimator.Configuration
     {
         public FontConfig TitleFont { get; set; } = new FontConfig(50, "#5d5d5d");
         public FontConfig LyricsFont { get; set; } = new FontConfig();
-        public FontConfig VerseFont { get; set; } = new FontConfig(32, "#5d5d5d");
+        public FontConfig VerseFont { get; set; } = new FontConfig(20, "#444444");
         public string FfmpegPath { get; set; }
         public string SongConfigPath { get; set; } = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         public string OutputPath { get; set; } = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "output");
