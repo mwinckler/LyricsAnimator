@@ -39,7 +39,7 @@ namespace LyricAnimator
             footerHeight = appConfig.OutputDimensions.FooterHeight;
             gradientHeight = appConfig.OutputDimensions.GradientHeight;
 
-            endOfVerseY = height / 2f;
+            endOfVerseY = height / 3f;
         }
 
         public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
@@ -55,9 +55,9 @@ namespace LyricAnimator
 
             var desiredReadingY = height * 3 / 4;
 
-            using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family);
-            using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family);
-            using var verseTypeface = SKTypeface.FromFamilyName(appConfig.VerseFont.Family);
+            using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+            using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+            using var verseTypeface = SKTypeface.FromFamilyName(appConfig.VerseFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
 
             var pixelsPerFrames = new List<float>();
 
