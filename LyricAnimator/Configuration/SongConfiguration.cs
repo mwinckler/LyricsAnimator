@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using Newtonsoft.Json;
 
 namespace LyricAnimator.Configuration
@@ -9,7 +8,8 @@ namespace LyricAnimator.Configuration
         public string SongTitle { get; set; }
         public string AudioFilePath { get; set; }
         public string OutputFilename { get; set; }
-        public List<Lyric> Lyrics { get; set; }
+        public string LyricsFilePath { get; set; }
+        public string Duration { get; set; }
 
         public static SongConfiguration LoadFromFile(string filePath)
         {
