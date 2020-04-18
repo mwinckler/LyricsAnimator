@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using LyricAnimator.Configuration;
 using SkiaSharp;
 
@@ -11,21 +12,17 @@ namespace LyricAnimator
     internal sealed class Animator
     {
         private const int DissolveAnimationDurationFrames = 60;
-        private const int EndTransitionDissolveDurationFrames = 120;
+
+        private readonly TimeSpan endTransitionDuration = TimeSpan.FromSeconds(2);
 
         private readonly AppConfiguration appConfig;
         private readonly object typefaceLock;
-
         private readonly int width;
         private readonly int height;
         private readonly int sideMargin;
         private readonly int headerHeight;
         private readonly int footerHeight;
         private readonly int gradientHeight;
-
-        // This is the y-position, in pixels, where the bottom of
-        // the lyrics label should end up at the end of verse time.
-        private readonly float endOfVerseY;
 
         public Animator(AppConfiguration appConfig, object typefaceLock)
         {
@@ -38,78 +35,121 @@ namespace LyricAnimator
             headerHeight = appConfig.OutputDimensions.HeaderHeight;
             footerHeight = appConfig.OutputDimensions.FooterHeight;
             gradientHeight = appConfig.OutputDimensions.GradientHeight;
-
-            endOfVerseY = height / 3f;
         }
 
         public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
         {
-            var lyrics = new List<(
-                Lyric lyric,
-                int startFrame,
-                int endFrame,
-                int preRollFrames,
-                float startTop,
-                float pixelsPerFrame
-            )>();
-
             var desiredReadingY = height * 3 / 4;
 
             using var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
             using var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
             using var verseTypeface = SKTypeface.FromFamilyName(appConfig.VerseFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
 
-            var pixelsPerFrames = new List<float>();
+            var timingRegex = new Regex(@"^(?:\[(\d{1,2}:\d{1,2}:\d{1,2})\])?\s*(?:\{([^}]+)\})?\s*(.*)$");
+            var unprocessedLines = File.ReadAllLines(config.LyricsFilePath);
 
-            foreach (var lyric in config.Lyrics)
+            var speedChangeEasingFrames = appConfig.FramesPerSecond * 4;
+
+            var processedLines = new List<(TimeSpan arrivalTime, TimeSpan nextArrivalTime, IEnumerable<string> lines)>();
+            var verseLabels = new List<VerseLabel>();
+
+            var segmentLines = new List<string>();
+            TimeSpan? segmentArrival = null;
+
+            foreach (var line in unprocessedLines)
             {
-                var textHeight = CalculateTextHeight(
+                var match = timingRegex.Match(line);
+                var nextArrivalGroup = match.Groups[1];
+
+                if (nextArrivalGroup.Success)
+                {
+                    var nextArrivalTime = TimeSpan.Parse(nextArrivalGroup.Value);
+
+                    if (segmentLines.Any())
+                    {
+                        processedLines.Add((segmentArrival.Value, nextArrivalTime, segmentLines));
+                        segmentLines = new List<string>();
+                    }
+
+                    segmentArrival = nextArrivalTime;
+
+                    // TODO: Make it clearer/explicit that verse text requires a paired segment timing
+                    if (match.Groups[2].Success)
+                    {
+                        var arrivalFrame = (int)(segmentArrival.Value.TotalSeconds * appConfig.FramesPerSecond);
+
+                        if (verseLabels.Any())
+                        {
+                            // TODO: Make configurable
+                            verseLabels.Last().HiddenFrame = arrivalFrame - 5 * appConfig.FramesPerSecond;
+                        }
+
+                        verseLabels.Add(new VerseLabel
+                        {
+                            ArrivalFrame = arrivalFrame,
+                            Text = match.Groups[2].Value
+                        });
+                    }
+                }
+
+                var lyricText = match.Groups[3].Value;
+
+                segmentLines.Add(lyricText);
+            }
+
+            float? previousPixelsPerFrame = null;
+
+            var speedChanges = new List<(int arrivalFrame, float fromPixelsPerFrame, float toPixelsPerFrame)>();
+
+            var lyrics = new List<Lyric>();
+
+            foreach (var timingSegment in processedLines)
+            {
+                // Calculate the speed of this segment, defined by (distance / duration)
+                var segmentHeight = CalculateTextHeight(
                     lyricTypeface,
                     appConfig.LyricsFont.Size,
-                    lyric.Lines,
+                    timingSegment.lines,
                     appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin,
                     width - sideMargin * 2
                 );
 
-                // Assumes starting position at Height (offscreen)
-                var distanceToMovePixels = textHeight + (height - endOfVerseY);
+                var segmentDuration = timingSegment.nextArrivalTime - timingSegment.arrivalTime;
+                var pixelsPerFrame = (float)(segmentHeight / segmentDuration.TotalSeconds / appConfig.FramesPerSecond);
+                var arrivalFrame = (int)(timingSegment.arrivalTime.TotalSeconds * appConfig.FramesPerSecond);
 
-                // All lyrics need to move at the same speed, else it looks goofy.
-                // Find the maximum speed any verse needs, then apply to all verses.
-                // In general this should be close enough for similarly-sized verses.
-                var pixelsPerSecond = (float)(distanceToMovePixels / (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds));
-                pixelsPerFrames.Add(pixelsPerSecond / appConfig.FramesPerSecond);
+                speedChanges.Add((
+                    arrivalFrame,
+                    previousPixelsPerFrame.GetValueOrDefault(pixelsPerFrame),
+                    pixelsPerFrame
+                ));
+
+                var segmentDurationFrames = segmentDuration.TotalSeconds * appConfig.FramesPerSecond;
+
+                previousPixelsPerFrame = pixelsPerFrame;
+
+                lyrics.Add(new Lyric {
+                    VisibleFrame = (int)(arrivalFrame - (appConfig.OutputDimensions.Height - desiredReadingY) / pixelsPerFrame - 100),
+                    HiddenFrame = (int)(arrivalFrame + segmentDurationFrames + appConfig.OutputDimensions.Height / pixelsPerFrame),
+                    ArrivalFrame = arrivalFrame,
+                    Lines = timingSegment.lines,
+                    Height = segmentHeight
+                });
             }
 
-            var pixelsPerFrame = pixelsPerFrames.Min();
+            var currentPixelsPerFrame = speedChanges.First().fromPixelsPerFrame;
 
-            foreach (var lyric in config.Lyrics)
-            {
-                // This is the number of frames "ahead of time" we need to start
-                // rolling the lyric label so that at StartSeconds, the top of the
-                // label is fully visible
-                var preRollFrames = (int)((height - desiredReadingY) / pixelsPerFrame);
-                var startFrame = (int)(lyric.StartTime.TotalSeconds * appConfig.FramesPerSecond - preRollFrames);
-                var startTop = height;
+            var currentSpeedChangeIndex = 1;
+            var speedChangeStartFrame = speedChanges.Count > 1 ? speedChanges[1].arrivalFrame - speedChangeEasingFrames / 2 : new int?();
+            float? accelerationPerFrame = null;
 
-                if (startFrame < 0)
-                {
-                    // Start the textbox higher up than completely off screen
-                    startTop = (int)(height - pixelsPerFrame * Math.Abs(startFrame));
-                    startFrame = 0;
-                }
+            var endTransitionDissolveDurationFrames = (int)(endTransitionDuration.TotalSeconds * appConfig.FramesPerSecond);
 
-                var endFrame = (int)(startFrame + (lyric.EndTime.TotalSeconds - lyric.StartTime.TotalSeconds) * appConfig.FramesPerSecond) + preRollFrames;
+            // TODO: Can we calculate total frames required from the song end time automatically?
+            // Or do we need an explicit "end of audio" timestamp in the lyrics file?
+            var duration = TimeSpan.Parse(config.Duration);
 
-                lyrics.Add((lyric, startFrame, endFrame, preRollFrames, startTop, pixelsPerFrame));
-            }
-
-            // Calculate total frames required to animate all lyrics
-            var lastEndFrame = lyrics.Max(lyric => lyric.endFrame);
-            var lastLyric = lyrics.First(lyric => lyric.endFrame == lastEndFrame);
-            var postRollFrames = Math.Min(EndTransitionDissolveDurationFrames, endOfVerseY / lastLyric.pixelsPerFrame);
-            var totalFramesRequired = lastEndFrame + postRollFrames;
-
+            var totalFramesRequired = duration.TotalSeconds * appConfig.FramesPerSecond;
             var outputFilePath = Path.Combine(outputDirectory.FullName, config.OutputFilename);
 
             File.Delete(outputFilePath);
@@ -123,58 +163,105 @@ namespace LyricAnimator
 
                 for (var frame = 0; frame <= totalFramesRequired; frame++)
                 {
-                    reportProgress(frame / totalFramesRequired);
-
-                    var verseLabels = new List<(string text, float y, float opacity)>();
+                    reportProgress(frame / (float)totalFramesRequired);
 
                     canvas.Clear(SKColors.Black);
 
-                    foreach (var lyric in lyrics)
+                    if (speedChangeStartFrame.HasValue)
                     {
-                        if (frame < lyric.startFrame)
+                        if (frame == speedChangeStartFrame.Value + speedChangeEasingFrames)
+                        {
+                            currentSpeedChangeIndex++;
+                            speedChangeStartFrame = speedChanges.Count > currentSpeedChangeIndex
+                                ? speedChanges[currentSpeedChangeIndex].arrivalFrame - speedChangeEasingFrames / 2
+                                : new int?();
+                            accelerationPerFrame = null;
+                        }
+                        else if (frame >= speedChangeStartFrame)
+                        {
+                            accelerationPerFrame ??= (speedChanges[currentSpeedChangeIndex].toPixelsPerFrame - currentPixelsPerFrame) / speedChangeEasingFrames;
+                            currentPixelsPerFrame += accelerationPerFrame.Value;
+                        }
+                    }
+
+                    for (var i = 0; i < lyrics.Count; i++)
+                    {
+                        var lyric = lyrics[i];
+
+                        if (frame < lyric.VisibleFrame)
                         {
                             continue;
                         }
 
-                        var y = lyric.startTop - lyric.pixelsPerFrame * (frame - lyric.startFrame);
-                        DrawLyric(canvas, lyricTypeface, appConfig.LyricsFont.Size, appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin, lyric.lyric.Lines, x: sideMargin, y);
-
-                        if (frame > lyric.startFrame - lyric.preRollFrames && lyric.lyric.VerseNumber > 0)
+                        if (frame == lyric.VisibleFrame)
                         {
-                            var opacity = frame < lyric.endFrame - DissolveAnimationDurationFrames
-                                ? Math.Min(1f, (float) (frame - lyric.startFrame) / DissolveAnimationDurationFrames)
-                                : Math.Max(0f, (float) (lyric.endFrame - frame) / DissolveAnimationDurationFrames);
-
-                            verseLabels.Add((
-                                $"verse {lyric.lyric.VerseNumber}",
-                                Math.Max(y - appConfig.VerseFont.Size, headerHeight + appConfig.VerseFont.Size),
-                                opacity
-                            ));
+                            lyric.Y = i > 0
+                                ? lyrics[i - 1].Y + lyrics[i - 1].Height
+                                : desiredReadingY + (lyric.ArrivalFrame - lyric.VisibleFrame) * currentPixelsPerFrame;
                         }
+                        else
+                        {
+                            lyric.Y -= currentPixelsPerFrame;
+                        }
+
+                        DrawLyric(
+                            canvas,
+                            lyricTypeface,
+                            appConfig.LyricsFont.Size,
+                            appConfig.LyricsFont.Size + appConfig.LyricsFont.LineMargin,
+                            lyric.Lines,
+                            x: sideMargin,
+                            y: lyric.Y
+                        );
                     }
 
                     DrawGradientOverlays(canvas);
 
-                    foreach (var verseLabel in verseLabels)
+                    var framesToArrivalPointAtCurrentSpeed = (int)((appConfig.OutputDimensions.Height - desiredReadingY) / currentPixelsPerFrame);
+
+                    for (var i = 0; i < verseLabels.Count; i++)
                     {
+                        var verseLabel = verseLabels[i];
+                        var opacity = 1f;
+
+                        if (frame < verseLabel.ArrivalFrame - framesToArrivalPointAtCurrentSpeed)
+                        {
+                            continue;
+                        }
+
+                        if (frame == verseLabel.ArrivalFrame - framesToArrivalPointAtCurrentSpeed)
+                        {
+                            verseLabel.Y = appConfig.OutputDimensions.Height;
+                        }
+                        else if (frame > verseLabel.ArrivalFrame - framesToArrivalPointAtCurrentSpeed &&
+                                 verseLabel.Y > appConfig.OutputDimensions.HeaderHeight + appConfig.OutputDimensions.GradientHeight)
+                        {
+                            verseLabel.Y -= currentPixelsPerFrame;
+                        }
+                        else if (frame >= verseLabel.HiddenFrame)
+                        {
+                            opacity = Math.Max(0, 1 - (frame - verseLabel.HiddenFrame) / (float)DissolveAnimationDurationFrames);
+                        }
+
                         DrawVerseLabel(
                             canvas,
                             verseTypeface,
                             appConfig.VerseFont.Size,
                             SKColor.Parse(appConfig.VerseFont.HexColor),
-                            verseLabel.text,
+                            verseLabel.Text,
                             width - sideMargin,
-                            verseLabel.y,
-                            verseLabel.opacity
+                            verseLabel.Y,
+                            opacity
                         );
                     }
 
                     DrawTitleAndFooterBars(canvas, titleTypeface, appConfig.TitleFont.Size, SKColor.Parse(appConfig.TitleFont.HexColor), config.SongTitle);
 
-                    if (totalFramesRequired - frame <= EndTransitionDissolveDurationFrames)
+                    if (totalFramesRequired - frame <= endTransitionDissolveDurationFrames)
                     {
+                        var alpha = (1 - (totalFramesRequired - frame) / (float)endTransitionDissolveDurationFrames) * 255;
                         using var paint = new SKPaint {
-                            Color = SKColors.Black.WithAlpha((byte)((1 - (totalFramesRequired - frame) / EndTransitionDissolveDurationFrames) * 255))
+                            Color = SKColors.Black.WithAlpha((byte)alpha)
                         };
                         canvas.DrawRect(new SKRect(0, 0, width, height), paint);
                     }
@@ -231,7 +318,10 @@ namespace LyricAnimator
         private static float CalculateTextHeight(SKTypeface typeface, float fontSize, IEnumerable<string> lines, float lineHeight, int maxWidth)
         {
             using var paint = CreatePaint(typeface, fontSize);
-            return lines.SelectMany(line => WrapText(paint, line, maxWidth)).Count() * lineHeight;
+            // Note drawing text effectively adds a blank line between each line of text,
+            // so we need to add lines.Count() * lineHeight to the overall height.
+            var lineCount = lines.SelectMany(line => WrapText(paint, line, maxWidth)).Count();
+            return lineCount * lineHeight + lines.Count() * lineHeight;
         }
 
         private void DrawLyric(SKCanvas canvas, SKTypeface typeface, float fontSize, float lineHeight, IEnumerable<string> lines, float x, float y)
@@ -330,6 +420,24 @@ namespace LyricAnimator
 
             proc.Start();
             return proc;
+        }
+
+        private sealed class Lyric
+        {
+            public int VisibleFrame { get; set; }
+            public int HiddenFrame { get; set; }
+            public int ArrivalFrame { get; set; }
+            public IEnumerable<string> Lines { get; set; }
+            public float Height { get; set; }
+            public float Y { get; set; }
+        }
+
+        private sealed class VerseLabel
+        {
+            public int ArrivalFrame { get; set; }
+            public int HiddenFrame { get; set; }
+            public string Text { get; set; }
+            public float Y { get; set; }
         }
     }
 }
