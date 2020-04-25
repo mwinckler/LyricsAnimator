@@ -7,8 +7,11 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using LyricAnimatorWpf.Configuration;
+using System.Xml;
+using LyricAnimator;
+using LyricAnimator.Configuration;
 using Newtonsoft.Json;
+using Formatting = Newtonsoft.Json.Formatting;
 
 namespace LyricAnimatorWpf
 {
