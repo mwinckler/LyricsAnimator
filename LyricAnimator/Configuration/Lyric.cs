@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace LyricAnimatorWpf.Configuration
+namespace LyricAnimator.Configuration
 {
-    internal sealed class Lyric
+    public sealed class Lyric
     {
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }

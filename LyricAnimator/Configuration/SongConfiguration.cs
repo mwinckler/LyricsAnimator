@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
 
-namespace LyricAnimatorWpf.Configuration
+namespace LyricAnimator.Configuration
 {
-    internal sealed class SongConfiguration
+    public sealed class SongConfiguration
     {
         public string SongTitle { get; set; }
         public string AudioFilePath { get; set; }

@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using System.Reflection;
 
-namespace LyricAnimatorWpf.Configuration
+namespace LyricAnimator.Configuration
 {
-    internal sealed class AppConfiguration
+    public sealed class AppConfiguration
     {
         public FontConfig TitleFont { get; set; } = new FontConfig(50, "#5d5d5d");
         public FontConfig LyricsFont { get; set; } = new FontConfig();
