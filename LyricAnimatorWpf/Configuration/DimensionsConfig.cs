@@ -1,4 +1,4 @@
-﻿namespace LyricAnimator.Configuration
+﻿namespace LyricAnimatorWpf.Configuration
 {
     internal sealed class DimensionsConfig
     {

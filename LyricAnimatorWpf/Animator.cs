@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using LyricAnimator.Configuration;
+using LyricAnimatorWpf.Configuration;
 using SkiaSharp;
 
-namespace LyricAnimator
+namespace LyricAnimatorWpf
 {
     internal sealed class Animator
     {

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace LyricAnimator.Properties
+namespace LyricAnimatorWpf.Properties
 {
 
 

@@ -1,14 +1,14 @@
 ﻿<Window
-    x:Class="LyricAnimator.MainWindow"
+    x:Class="LyricAnimatorWpf.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:lyricAnimator="clr-namespace:LyricAnimator"
+    xmlns:lyricAnimatorWpf="clr-namespace:LyricAnimatorWpf"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Lyrics Animator"
     Width="440"
     Height="400"
-    d:DataContext="{d:DesignInstance lyricAnimator:MainWindowViewModel}"
+    d:DataContext="{d:DesignInstance lyricAnimatorWpf:MainWindowViewModel}"
     Background="White"
     mc:Ignorable="d">
     <Window.Resources>
