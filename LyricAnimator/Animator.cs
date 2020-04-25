@@ -14,6 +14,7 @@ namespace LyricAnimator
         private const int DissolveAnimationDurationFrames = 60;
 
         private readonly TimeSpan endTransitionDuration = TimeSpan.FromSeconds(2);
+        private readonly TimeSpan verseLabelHideBeforeVerseEnd = TimeSpan.FromSeconds(5);
 
         private readonly AppConfiguration appConfig;
         private readonly object typefaceLock;
@@ -80,8 +81,7 @@ namespace LyricAnimator
 
                         if (verseLabels.Any())
                         {
-                            // TODO: Make configurable
-                            verseLabels.Last().HiddenFrame = arrivalFrame - 5 * appConfig.FramesPerSecond;
+                            verseLabels.Last().HiddenFrame = arrivalFrame - (int)(verseLabelHideBeforeVerseEnd.TotalSeconds * appConfig.FramesPerSecond);
                         }
 
                         verseLabels.Add(new VerseLabel
@@ -95,6 +95,11 @@ namespace LyricAnimator
                 var lyricText = match.Groups[3].Value;
 
                 segmentLines.Add(lyricText);
+            }
+
+            if (verseLabels.Any())
+            {
+                verseLabels.Last().HiddenFrame = (int)(processedLines.Last().nextArrivalTime.TotalSeconds * appConfig.FramesPerSecond);
             }
 
             float? previousPixelsPerFrame = null;
@@ -259,7 +264,7 @@ namespace LyricAnimator
 
                     if (totalFramesRequired - frame <= endTransitionDissolveDurationFrames)
                     {
-                        var alpha = (1 - (totalFramesRequired - frame) / (float)endTransitionDissolveDurationFrames) * 255;
+                        var alpha = (1 - (totalFramesRequired - frame) / endTransitionDissolveDurationFrames) * 255;
                         using var paint = new SKPaint {
                             Color = SKColors.Black.WithAlpha((byte)alpha)
                         };
