@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input;
 
-namespace LyricAnimator
+namespace LyricAnimatorWpf
 {
     internal sealed class Command : ICommand
     {

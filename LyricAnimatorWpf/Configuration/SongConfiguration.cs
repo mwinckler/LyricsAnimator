@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
 
-namespace LyricAnimator.Configuration
+namespace LyricAnimatorWpf.Configuration
 {
     internal sealed class SongConfiguration
     {

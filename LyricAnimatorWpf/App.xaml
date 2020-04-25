@@ -1,9 +1,9 @@
-﻿<Application x:Class="LyricAnimator.App"
+﻿<Application x:Class="LyricAnimatorWpf.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:LyricAnimator"
+             xmlns:local="clr-namespace:LyricAnimatorWpf"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+
     </Application.Resources>
 </Application>

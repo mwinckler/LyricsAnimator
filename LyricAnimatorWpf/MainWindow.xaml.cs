@@ -7,10 +7,10 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using LyricAnimator.Configuration;
+using LyricAnimatorWpf.Configuration;
 using Newtonsoft.Json;
 
-namespace LyricAnimator
+namespace LyricAnimatorWpf
 {
     public partial class MainWindow : Window
     {
