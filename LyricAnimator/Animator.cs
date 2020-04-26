@@ -25,6 +25,9 @@ namespace LyricAnimator
         private readonly int footerHeight;
         private readonly int gradientHeight;
 
+        public Animator(AppConfiguration appConfig)
+            : this(appConfig, new object()) { }
+
         public Animator(AppConfiguration appConfig, object typefaceLock)
         {
             this.appConfig = appConfig;
@@ -38,9 +41,14 @@ namespace LyricAnimator
             gradientHeight = appConfig.OutputDimensions.GradientHeight;
         }
 
-        public void Animate(Action<float> reportProgress, SongConfiguration config, string ffmpegExePath, DirectoryInfo outputDirectory, string pngOutputPath = null)
+        public void Animate(Action<float> reportProgress, SongConfiguration config, DirectoryInfo outputDirectory, string pngOutputPath = null)
         {
             var desiredReadingY = height * 3 / 4;
+
+            if (!File.Exists(config.AudioFilePath))
+            {
+                throw new FileNotFoundException($"Song file not found: '{config.AudioFilePath}'");
+            }
 
             using (var titleTypeface = SKTypeface.FromFamilyName(appConfig.TitleFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright))
             using (var lyricTypeface = SKTypeface.FromFamilyName(appConfig.LyricsFont.Family, SKFontStyleWeight.Light, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright))
@@ -429,15 +437,14 @@ namespace LyricAnimator
         {
             var proc = new Process
             {
-                StartInfo =
-            {
-                FileName = appConfig.FfmpegPath,
-                Arguments = $"-framerate {appConfig.FramesPerSecond} -f image2pipe -i - -i {audioFilePath} {outputFilePath}",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true
-            }
+                StartInfo = {
+                    FileName = appConfig.FfmpegPath,
+                    Arguments = $"-framerate {appConfig.FramesPerSecond} -f image2pipe -i - -i {audioFilePath} {outputFilePath}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true
+                }
             };
 
             proc.Start();
