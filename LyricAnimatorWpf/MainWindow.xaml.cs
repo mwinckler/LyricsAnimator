@@ -241,7 +241,7 @@ namespace LyricAnimatorWpf
             var pngOutputDir = SaveFrames
                 ? Directory.CreateDirectory(Path.Combine(outputDir.FullName, Path.Combine($"png_{config.OutputFilename}")))
                 : null;
-            new Animator(appConfig, skiaTypefaceLock).Animate(ProgressReporterFactory(config.OutputFilename), config, PathToFfmpeg, outputDir, pngOutputDir?.FullName);
+            new Animator(appConfig, skiaTypefaceLock).Animate(ProgressReporterFactory(config.OutputFilename), config, outputDir, pngOutputDir?.FullName);
         }
 
         private Action<float> ProgressReporterFactory(string identifier) =>
