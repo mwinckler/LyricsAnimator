@@ -56,7 +56,7 @@ namespace LyricAnimator
             {
 
                 var timingRegex = new Regex(@"^(?:\[(\d{1,2}:\d{1,2}:\d{1,2})\])?\s*(?:\{([^}]+)\})?\s*(.*)$");
-                var unprocessedLines = File.ReadAllLines(config.LyricsFilePath);
+                var unprocessedLines = config.Lyrics;
 
                 var speedChangeEasingFrames = appConfig.FramesPerSecond * 4;
 
