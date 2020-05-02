@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CommandLine;
 using LyricAnimator;
 using LyricAnimator.Configuration;
@@ -40,11 +41,11 @@ namespace LyricAnimatorConsole
                             Environment.Exit(1);
                         }
 
-                        var configs = Directory.GetFiles(opts.SongConfigDir, "*.json");
+                        var configs = Directory.GetFiles(opts.SongConfigDir, "*.txt");
 
                         if (!configs.Any())
                         {
-                            Console.Error.WriteLine($"No .json configuration files found in directory '{opts.SongConfigDir}'");
+                            Console.Error.WriteLine($"No .txt lyric files found in directory '{opts.SongConfigDir}'");
                             Environment.Exit(1);
                         }
 
@@ -79,8 +80,20 @@ namespace LyricAnimatorConsole
             animator.Animate(progressReporter, songConfig, outputDirectory);
         }
 
-        private static SongConfiguration LoadSongConfig(string filePath) =>
-            JsonConvert.DeserializeObject<SongConfiguration>(File.ReadAllText(filePath));
+        private static SongConfiguration LoadSongConfig(string filePath)
+        {
+            // TODO: Make this more robust
+            var lines = File.ReadAllLines(filePath);
+            var durationLine = lines.Last(line => !string.IsNullOrEmpty(line));
+            return new SongConfiguration
+            {
+                SongTitle = lines.First(),
+                Lyrics = lines.Skip(2),
+                AudioFilePath = Regex.Replace(filePath, @"\.txt$", ".mp3"),
+                OutputFilename = Regex.Replace(Path.GetFileName(filePath), @"\.txt$", ".mp4"),
+                Duration = Regex.Replace(durationLine, @"[[\]]", "")
+            };
+        }
 
         internal sealed class Options
         {
