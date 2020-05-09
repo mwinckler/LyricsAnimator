@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using CommandLine;
 using LyricAnimator;
 using LyricAnimator.Configuration;
@@ -27,7 +26,7 @@ namespace LyricAnimatorConsole
 
                     if (File.Exists(opts.SongConfigFile))
                     {
-                        var songConfig = LoadSongConfig(opts.SongConfigFile);
+                        var songConfig = SongConfiguration.LoadFromFile(opts.SongConfigFile);
                         Console.WriteLine($"Processing single song config: '{opts.SongConfigFile}'");
                         ProcessSong(ProgressReporterFactory(songConfig.OutputFilename), animator, songConfig, outputDir);
                         Console.WriteLine("Finished.");
@@ -41,19 +40,19 @@ namespace LyricAnimatorConsole
                             Environment.Exit(1);
                         }
 
-                        var configs = Directory.GetFiles(opts.SongConfigDir, "*.txt");
+                        var configFiles = Directory.GetFiles(opts.SongConfigDir, "*.txt");
 
-                        if (!configs.Any())
+                        if (!configFiles.Any())
                         {
                             Console.Error.WriteLine($"No .txt lyric files found in directory '{opts.SongConfigDir}'");
                             Environment.Exit(1);
                         }
 
-                        Console.WriteLine($"Processing {configs.Count()} configuration files from '{opts.SongConfigDir}'...");
+                        Console.WriteLine($"Processing {configFiles.Count()} configuration files from '{opts.SongConfigDir}'...");
 
-                        foreach (var config in configs)
+                        foreach (var configFile in configFiles)
                         {
-                            var songConfig = LoadSongConfig(config);
+                            var songConfig = SongConfiguration.LoadFromFile(configFile);
                             ProcessSong(ProgressReporterFactory(songConfig.OutputFilename), animator, songConfig, outputDir);
                             Console.Write("\n");
                         }
@@ -78,21 +77,6 @@ namespace LyricAnimatorConsole
         )
         {
             animator.Animate(progressReporter, songConfig, outputDirectory);
-        }
-
-        private static SongConfiguration LoadSongConfig(string filePath)
-        {
-            // TODO: Make this more robust
-            var lines = File.ReadAllLines(filePath);
-            var durationLine = lines.Last(line => !string.IsNullOrEmpty(line));
-            return new SongConfiguration
-            {
-                SongTitle = lines.First(),
-                Lyrics = lines.Skip(2),
-                AudioFilePath = Regex.Replace(filePath, @"\.txt$", ".mp3"),
-                OutputFilename = Regex.Replace(Path.GetFileName(filePath), @"\.txt$", ".mp4"),
-                Duration = Regex.Replace(durationLine, @"[[\]]", "")
-            };
         }
 
         internal sealed class Options
