@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Xml;
 using LyricAnimator;
 using LyricAnimator.Configuration;
 using Newtonsoft.Json;
@@ -176,7 +175,7 @@ namespace LyricAnimatorWpf
                 var outputDir = Directory.CreateDirectory(OutputDirectory);
                 ResetProgress();
 
-                var configurationFiles = Directory.GetFiles(ConfigDirectory, "*.json");
+                var configurationFiles = Directory.GetFiles(ConfigDirectory, "*.txt");
 
                 if (RunInParallel)
                 {

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace LyricAnimator.Configuration
 {
@@ -14,7 +15,17 @@ namespace LyricAnimator.Configuration
 
         public static SongConfiguration LoadFromFile(string filePath)
         {
-            return JsonConvert.DeserializeObject<SongConfiguration>(File.ReadAllText(filePath));
+            // TODO: Make this more robust
+            var lines = File.ReadAllLines(filePath);
+            var durationLine = lines.Last(line => !string.IsNullOrEmpty(line));
+            return new SongConfiguration
+            {
+                SongTitle = lines.First(),
+                Lyrics = lines.Skip(2),
+                AudioFilePath = Regex.Replace(filePath, @"\.txt$", ".mp3"),
+                OutputFilename = Regex.Replace(Path.GetFileName(filePath), @"\.txt$", ".mp4"),
+                Duration = Regex.Replace(durationLine, @"[[\]]", "")
+            };
         }
     }
 }
