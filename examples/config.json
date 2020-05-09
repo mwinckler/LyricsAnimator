@@ -1,0 +1,32 @@
+{
+  "TitleFont": {
+    "Family": "Roboto",
+    "Size": 40.0,
+    "HexColor": "#5d5d5d",
+    "LineMargin": 20.0
+  },
+  "LyricsFont": {
+    "Family": "Roboto",
+    "Size": 72.0,
+    "HexColor": "#ffffff",
+    "LineMargin": 20.0
+  },
+  "VerseFont": {
+    "Family": "Roboto",
+    "Size": 24.0,
+    "HexColor": "#444444",
+    "LineMargin": 20.0
+  },
+  "FfmpegPath": "C:\\path\\to\\ffmpeg.exe",
+  "SongConfigPath": "C:\\path\\to\\lyrics\\and\\audio\\files",
+  "OutputPath": "C:\\path\\where\\videos\\should\\be\\created",
+  "FramesPerSecond": 30,
+  "OutputDimensions": {
+    "Width": 1280,
+    "Height": 720,
+    "SideMargin": 100,
+    "HeaderHeight": 80,
+    "FooterHeight": 50,
+    "GradientHeight": 100
+  }
+}
